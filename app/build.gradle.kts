@@ -20,13 +20,35 @@ android {
         }
     }
 
+    flavorDimensions.add("TomTom")
+    productFlavors {
+        create("F1") {
+            dimension = "TomTom"
+            applicationIdSuffix = ".f1"
+            versionNameSuffix = "-f1"
+        }
+        create("F2") {
+            dimension = "TomTom"
+            applicationIdSuffix = ".f2"
+            versionNameSuffix = "-f2"
+        }
+        create("F3") {
+            dimension = "TomTom"
+            applicationIdSuffix = ".f3"
+            versionNameSuffix = "-f3"
+        }
+    }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
         }
     }
     compileOptions {
