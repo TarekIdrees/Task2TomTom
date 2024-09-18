@@ -1,0 +1,79 @@
+name: Android Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: 'Name for the release'
+
+jobs:
+  build-apks:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        flavor: [F1, F2, F3]
+        buildType: [Debug, Release]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.1.7
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4.3.0
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Make Gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build APK
+        run: |
+          ./gradlew assemble${{ matrix.flavor }}${{ matrix.buildType }}
+        env:
+          FLAVOR: ${{ matrix.flavor }}
+          BUILD TYPE: ${{ matrix.buildType }}
+
+      - name: Upload APKs
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.flavor }}-${{ matrix.buildType }}-apk
+          path: app/build/outputs/apk/${{ matrix.flavor }}/${{  matrix.buildType == 'Debug' && 'debug' || 'release' }}/
+
+  upload-statues-failed-builds:
+    needs: build-apks
+    runs-on: ubuntu-latest
+    if: failure()
+
+    steps:
+      - name: Check and upload build statues if any builds failed
+        run: echo "Some builds failed" > build-status.txt
+
+      - name: Upload build status if builds failed
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-status
+          path: build-status.txt
+
+  release:
+    needs: build-apks
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.run_number }}
+          release_name: Release ${{ github.event.inputs.release_name }} tag ${{ github.run_number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
